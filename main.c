@@ -192,6 +192,7 @@ int ls(char **args) {
     return 1;
 }
 
+// mkdir command
 int mkDirectory(char **args) {
     if (args[1] == NULL) fprintf(stderr, "mkDirectory: expected argument\n");
     if (mkDirectory(args[1]) != 0) perror("mkDirectory");
@@ -199,6 +200,7 @@ int mkDirectory(char **args) {
     return 1;
 }
 
+// rmdir command
 int rmDirectory(char **args) {
     if (args[1] == NULL) fprintf(stderr, "rmDirectory: expected argument");
     if (rmDirectory(args[1]) != 0) perror("rmDirectory");
@@ -206,6 +208,7 @@ int rmDirectory(char **args) {
     return 1;
 }
 
+// wget command
 int wget(char **args) {
     pid_t pid = fork(); // create process to execute command
     int status;
@@ -233,7 +236,7 @@ int help(char **args) {
     return 1;
 }
 
-
+// clear terminal
 int clear(char **args) {
     if (args[1] != NULL) fprintf(stderr, "too many arguments\n"); // too many arguments
     printf("\0333c"); // clear screen
