@@ -52,7 +52,7 @@ int (*builtin_func[]) (char **) = {
 };
 
 int main(int argc, char **argv) {
-    printf("Welcome to Kenny Cui's Linux Terminal!\n\n");
+    printf("Welcome to the Linux Terminal!\n\n");
     runTerminal();
     return EXIT_SUCCESS;
 }
