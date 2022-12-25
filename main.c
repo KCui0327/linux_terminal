@@ -28,8 +28,28 @@ int numBuiltIn(void);
 int execute(char **args);
 
 // default commands
-char *builtin_str[] = {"cd", "pwd", "ls", "mkDirectory", "rmDirectory", "wget", "help", "clear", "exit"};
-int (*builtin_func[]) (char **) = {&cd, &pwd, &ls, &mkDirectory, &rmDirectory, &wget, &help, &clear, &exitTerm};
+char *builtin_str[] = {
+        "cd",
+        "pwd",
+        "ls",
+        "mkDirectory",
+        "rmDirectory",
+        "wget",
+        "help",
+        "clear",
+        "exit"
+};
+int (*builtin_func[]) (char **) = {
+        &cd,
+        &pwd,
+        &ls,
+        &mkDirectory,
+        &rmDirectory,
+        &wget,
+        &help,
+        &clear,
+        &exitTerm
+};
 
 int main(int argc, char **argv) {
     printf("Welcome to Kenny Cui's Linux Terminal!\n\n");
@@ -140,76 +160,63 @@ int launch(char **args) {
 }
 
 // number of built-in commands
-int numBuiltIn(void) {
-    return sizeof(builtin_str) / sizeof(builtin_str[0]);
-}
+int numBuiltIn(void) { return sizeof(builtin_str) / sizeof(builtin_str[0]);}
 
 // cd command
 int cd(char **args) {
     if (args[1] == NULL) fprintf(stderr,"lsh: expected argument to \"cd\"\n"); // no argument given
-    else {
-        if (chdir(args[1]) != 0) {
-            perror("lsh");
-        }
-    }
+    if (chdir(args[1]) != 0) perror("lsh");
     return 1;
 }
 
+// pwd command
 int pwd(char **args) {
     char s[1024];
     if (getcwd(s, sizeof(s)) == NULL) perror("pwd");
-    printf("%s\n", s);
+    printf("%s\n", s); // prints current dir
 
     return 1;
 }
 
+// ls command
 int ls(char **args) {
-    pid_t pid = fork();
+    pid_t pid = fork(); // create process to execute command
     int status;
 
     if (pid == 0) {
-        execvp("ls", args);
+        execvp("ls", args); // execute command
         perror("ls");
         exit(EXIT_FAILURE);
-    } else if (pid < 0) {
-        perror("fork");
-    } else {
-        waitpid(pid, &status, 0);
-    }
+    } else if (pid < 0) perror("fork"); // fork error
+    waitpid(pid, &status, 0); // wait for child process to finish
     return 1;
 }
 
 int mkDirectory(char **args) {
     if (args[1] == NULL) fprintf(stderr, "mkDirectory: expected argument\n");
-    else {
-        if (mkDirectory(args[1]) != 0) perror("mkDirectory");
-    }
+    if (mkDirectory(args[1]) != 0) perror("mkDirectory");
 
     return 1;
 }
 
 int rmDirectory(char **args) {
     if (args[1] == NULL) fprintf(stderr, "rmDirectory: expected argument");
-    else {
-        if (rmDirectory(args[1]) != 0) perror("rmDirectory");
-    }
+    if (rmDirectory(args[1]) != 0) perror("rmDirectory");
 
     return 1;
 }
 
 int wget(char **args) {
-    pid_t pid = fork();
+    pid_t pid = fork(); // create process to execute command
     int status;
 
     if (pid == 0) {
-        execvp("wget", args);
+        execvp("wget", args); // execute command
         perror("wget");
         exit(EXIT_FAILURE);
-    } else if (pid < 0) {
-        perror("fork");
-    } else {
-        waitpid(pid, &status, 0);
-    }
+    } else if (pid < 0) perror("fork"); // fork error
+    waitpid(pid, &status, 0); // wait for child process to finish
+
 }
 
 // help command
@@ -218,7 +225,7 @@ int help(char **args) {
     printf("Type program names and arguments, and hit enter.\n");
     printf("The following are built in:\n");
 
-    // prints available commands
+    // print the names of the built-in commands
     for (int i = 0; i < numBuiltIn(); i++)
         printf("    %s\n", builtin_str[i]);
 
@@ -228,8 +235,8 @@ int help(char **args) {
 
 
 int clear(char **args) {
-    if (args[1] != NULL) fprintf(stderr, "too many arguments\n");
-    printf("\0333c");
+    if (args[1] != NULL) fprintf(stderr, "too many arguments\n"); // too many arguments
+    printf("\0333c"); // clear screen
     return 1;
 }
 
@@ -238,13 +245,16 @@ int exitTerm(char ** args) {return 0;}
 
 // execute commands
 int execute(char **args) {
-    if (args[0] == NULL) return 1;
+    if (args[0] == NULL) return 1; // no command specified
 
+    // check if the command is a built-in command
     for (int i = 0; i < numBuiltIn(); i++) {
         if (strcmp(args[0], builtin_str[i]) == 0) {
+            // execute the corresponding function for the built-in command
             return (*builtin_func[i])(args);
         }
     }
+    // command is not a built-in command, launch it in a new process
     return launch(args);
 }
 
