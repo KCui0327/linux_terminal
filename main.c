@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #define INPUT_BUF_SIZE 1024
@@ -15,24 +16,33 @@ char *readLine(void);
 char **splitLine(char *line);
 int launch(char **args);
 int cd(char **args);
+int pwd(char **args);
+int ls(char **args);
+int mkDirectory(char **args);
+int rmDirectory(char **args);
+int wget(char **args);
 int help(char **args);
+int clear(char **args);
 int exitTerm(char **args);
 int numBuiltIn(void);
 int execute(char **args);
 
-char *builtin_str[] = {"cd", "help", "exit"};
-int (*builtin_func[]) (char **) = {&cd, &help, &exitTerm};
+// default commands
+char *builtin_str[] = {"cd", "pwd", "ls", "mkDirectory", "rmDirectory", "wget", "help", "clear", "exit"};
+int (*builtin_func[]) (char **) = {&cd, &pwd, &ls, &mkDirectory, &rmDirectory, &wget, &help, &clear, &exitTerm};
 
 int main(int argc, char **argv) {
+    printf("Welcome to Kenny Cui's Linux Terminal!\n\n");
     runTerminal();
     return EXIT_SUCCESS;
 }
 
+// run terminal
 void runTerminal(void) {
     char *line, **args;
     int status;
 
-    do {
+    do { // continuously prompts for input
         printf("> ");
         line = readLine();
         args = splitLine(line);
@@ -42,19 +52,20 @@ void runTerminal(void) {
     } while (status);
 }
 
+// read input
 char *readLine(void) {
     int position = 0, bufferSize = INPUT_BUF_SIZE, c;
-    char *buffer = malloc(sizeof(char) * bufferSize);
+    char *buffer = malloc(sizeof(char *) * bufferSize);
 
-    if (!buffer) {
+    if (!buffer) { // cannot allocate memory
         fprintf(stderr, "lsh: allocation error");
         exit(EXIT_FAILURE);
     }
 
     while (true) {
         c = getchar();
-        if (c == EOF) exit(EXIT_SUCCESS);
-        else if(c == '\n') {
+        if (c == EOF) exit(EXIT_SUCCESS); // reached end of file
+        else if (c == '\n') { // reached end of line
             buffer[position] = '\0';
             return buffer;
         } else {
@@ -62,10 +73,11 @@ char *readLine(void) {
         }
         position++;
 
+        // if input exceeds buffer size
         if (position >= INPUT_BUF_SIZE) {
             bufferSize += INPUT_BUF_SIZE;
-            buffer = realloc(buffer, bufferSize);
-            if (!buffer) {
+            buffer = realloc(buffer, bufferSize); // reallocate with double the size
+            if (!buffer) { // cannot allocate memory
                 fprintf(stderr, "lsh: allocation error");
                 exit(EXIT_FAILURE);
             }
@@ -73,27 +85,29 @@ char *readLine(void) {
     }
 }
 
+// parse input
 char **splitLine(char *line) {
     int bufferSize = SPLIT_BUF_SIZE, position = 0;
-    char **wordSplit = malloc(sizeof(char) * bufferSize);
+    char **wordSplit = malloc(sizeof(char *) * bufferSize);
 
-    if (!wordSplit) {
+    if (!wordSplit) { // cannot allocate memory
         fprintf(stderr, "lsh: allocation error");
         exit(EXIT_FAILURE);
     }
 
-    char *token = strtok(line, CHAR_SPLIT);
+    char *token = strtok(line, CHAR_SPLIT); // split inputs into tokes
     char **backupToken;
 
     while (token != NULL) {
         wordSplit[position] = token;
         position++;
 
+        // if input exceeds buffer size
         if (position >= bufferSize) {
             bufferSize += SPLIT_BUF_SIZE;
             backupToken = wordSplit;
-            wordSplit = realloc(wordSplit, sizeof(char *) * bufferSize);
-            if (!wordSplit) {
+            wordSplit = realloc(wordSplit, sizeof(char *) * bufferSize); // reallocate with double the size
+            if (!wordSplit) { // cannot allocate memory
                 free(backupToken);
                 fprintf(stderr, "lsh: allocation error");
                 exit(EXIT_FAILURE);
@@ -106,16 +120,17 @@ char **splitLine(char *line) {
     return wordSplit;
 }
 
+// launches terminal
 int launch(char **args) {
     pid_t pid;
     int status;
     pid = fork();
 
-    if (pid == 0) {
+    if (pid == 0) { // returned to newly created child
         if (execvp(args[0], args) == -1) perror("lsh");
         exit(EXIT_FAILURE);
-    } else if (pid < 0) perror("lsh");
-    else {
+    } else if (pid < 0) perror("lsh"); // cannot create child
+    else { // return to parent
         do {
             waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
@@ -124,10 +139,14 @@ int launch(char **args) {
     return 1;
 }
 
-int numBuiltIn(void) {return sizeof(builtin_str) / sizeof(char *);}
+// number of built-in commands
+int numBuiltIn(void) {
+    return sizeof(builtin_str) / sizeof(builtin_str[0]);
+}
 
+// cd command
 int cd(char **args) {
-    if (args[1] == NULL) fprintf(stderr,"lsh: expected argument to \"cd\"\n");
+    if (args[1] == NULL) fprintf(stderr,"lsh: expected argument to \"cd\"\n"); // no argument given
     else {
         if (chdir(args[1]) != 0) {
             perror("lsh");
@@ -136,11 +155,70 @@ int cd(char **args) {
     return 1;
 }
 
+int pwd(char **args) {
+    char s[1024];
+    if (getcwd(s, sizeof(s)) == NULL) perror("pwd");
+    printf("%s\n", s);
+
+    return 1;
+}
+
+int ls(char **args) {
+    pid_t pid = fork();
+    int status;
+
+    if (pid == 0) {
+        execvp("ls", args);
+        perror("ls");
+        exit(EXIT_FAILURE);
+    } else if (pid < 0) {
+        perror("fork");
+    } else {
+        waitpid(pid, &status, 0);
+    }
+    return 1;
+}
+
+int mkDirectory(char **args) {
+    if (args[1] == NULL) fprintf(stderr, "mkDirectory: expected argument\n");
+    else {
+        if (mkDirectory(args[1]) != 0) perror("mkDirectory");
+    }
+
+    return 1;
+}
+
+int rmDirectory(char **args) {
+    if (args[1] == NULL) fprintf(stderr, "rmDirectory: expected argument");
+    else {
+        if (rmDirectory(args[1]) != 0) perror("rmDirectory");
+    }
+
+    return 1;
+}
+
+int wget(char **args) {
+    pid_t pid = fork();
+    int status;
+
+    if (pid == 0) {
+        execvp("wget", args);
+        perror("wget");
+        exit(EXIT_FAILURE);
+    } else if (pid < 0) {
+        perror("fork");
+    } else {
+        waitpid(pid, &status, 0);
+    }
+}
+
+// help command
 int help(char **args) {
     printf("Kenny Cui's LSH\n");
     printf("Type program names and arguments, and hit enter.\n");
     printf("The following are built in:\n");
 
+    // prints available commands
     for (int i = 0; i < numBuiltIn(); i++)
         printf("    %s\n", builtin_str[i]);
 
@@ -148,14 +226,25 @@ int help(char **args) {
     return 1;
 }
 
+
+int clear(char **args) {
+    if (args[1] != NULL) fprintf(stderr, "too many arguments\n");
+    printf("\0333c");
+    return 1;
+}
+
+// exit command
 int exitTerm(char ** args) {return 0;}
 
+// execute commands
 int execute(char **args) {
     if (args[0] == NULL) return 1;
 
     for (int i = 0; i < numBuiltIn(); i++) {
-        if (strcmp(args[0], builtin_str[i]) == 0)
+        if (strcmp(args[0], builtin_str[i]) == 0) {
             return (*builtin_func[i])(args);
+        }
     }
     return launch(args);
 }
+
