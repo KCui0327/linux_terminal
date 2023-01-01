@@ -22,6 +22,9 @@ int mkDirectory(char **args);
 int rmDirectory(char **args);
 int wget(char **args);
 int help(char **args);
+int copyFile(char **args);
+int moveFile(char **args);
+int removeFile(char **args);
 int clear(char **args);
 int exitTerm(char **args);
 int numBuiltIn(void);
@@ -32,9 +35,12 @@ char *builtin_str[] = {
         "cd",
         "pwd",
         "ls",
-        "mkDirectory",
-        "rmDirectory",
+        "mkdir",
+        "rmdir",
         "wget",
+        "rm",
+        "cp",
+        "mv",
         "help",
         "clear",
         "exit"
@@ -46,6 +52,9 @@ int (*builtin_func[]) (char **) = {
         &mkDirectory,
         &rmDirectory,
         &wget,
+        &copyFile,
+        &moveFile,
+        &removeFile,
         &help,
         &clear,
         &exitTerm
@@ -220,6 +229,53 @@ int wget(char **args) {
     } else if (pid < 0) perror("fork"); // fork error
     waitpid(pid, &status, 0); // wait for child process to finish
 
+}
+
+// copy file
+int copyFile(char **args) {
+    if (args[1] == NULL || args[2] == NULL)  // missing arguments
+        fprintf(stderr, "lsh: two few arguments");
+    else {
+        int status;
+        // allocate memory for command
+        char *command = malloc(sizeof(char) * (strlen(args[1]) + strlen(args[2])) + 4);
+        sprintf(command, "cp %s, %s", args[1], args[2]); // copy arguments into command
+        status = system(command); // executes command
+        free(command); // free dynamically allocated memory for command
+        if (status != 0) // error occurred
+            fprintf(stderr, "lsh: error in copying files");
+    }
+    return 1;
+}
+
+// move file
+int moveFile(char **args) {
+    if (args[1] == NULL || args[2] == NULL)  // missing arguments
+        fprintf(stderr, "lsh: two few arguments");
+    else {
+        int status;
+        // allocate memory for command
+        char *command = malloc(sizeof(char) * (strlen(args[1]) + strlen(args[2])) + 4);
+        sprintf(command, "mv %s, %s", args[1], args[2]); // copy arguments into command
+        status = system(command); // executes command
+        free(command); // free dynamically allocated memory for command
+        if (status != 0) // error occurred
+            fprintf(stderr, "lsh: error in moving files");
+    }
+    return 1;
+}
+
+// delete file
+int removeFile(char **args) {
+    if (args[1] == NULL) {
+        fprintf(stderr, "lsh: two few arguments"); // missing arguments
+    } else {
+        // attempt to delete each file
+        for (int i = 0; args[i] != NULL; i++) {
+            if (unlink(args[i]) != 0) perror("lsh"); // specified file was not removed
+        }
+    }
+    return 1;
 }
 
 // help command
